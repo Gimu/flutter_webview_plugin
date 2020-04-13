@@ -133,32 +133,62 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         rc = self.viewController.view.bounds;
     }
 
+    WKPreferences *preferences = [[WKPreferences alloc] init];
+    if ([withJavascript boolValue]) {
+        preferences.javaScriptEnabled = true;
+        preferences.javaScriptCanOpenWindowsAutomatically = true;
+    } else {
+        preferences.javaScriptEnabled = false;
+        preferences.javaScriptCanOpenWindowsAutomatically = false;
+    }
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
     configuration.userContentController = userContentController;
-    self.webview = [[WKWebView alloc] initWithFrame:rc configuration:configuration];
-    self.webview.UIDelegate = self;
-    self.webview.navigationDelegate = self;
-    self.webview.scrollView.delegate = self;
-    self.webview.hidden = [hidden boolValue];
-    self.webview.scrollView.showsHorizontalScrollIndicator = [scrollBar boolValue];
-    self.webview.scrollView.showsVerticalScrollIndicator = [scrollBar boolValue];
-    
-    [self.webview addObserver:self forKeyPath:@"estimatedProgress" options:NSKeyValueObservingOptionNew context:NULL];
-
-    WKPreferences* preferences = [[self.webview configuration] preferences];
-    if ([withJavascript boolValue]) {
-        [preferences setJavaScriptEnabled:YES];
-    } else {
-        [preferences setJavaScriptEnabled:NO];
-    }
+    configuration.preferences = preferences;
 
     _enableZoom = [withZoom boolValue];
 
-    UIViewController* presentedViewController = self.viewController.presentedViewController;
-    UIViewController* currentViewController = presentedViewController != nil ? presentedViewController : self.viewController;
-    [currentViewController.view addSubview:self.webview];
+    // Mandatory cookie
+    NSString *cookie = call.arguments[@"cookie"];
+    NSString *url = call.arguments[@"url"];
+    // REQUIRES iOS 11.0+
+    // @docs WKWebViewConfiguration is only used when a web view is first initialized. You cannot use this class to change the web view's configuration after it has been created.
+    WKHTTPCookieStore *cookieStore = configuration.websiteDataStore.httpCookieStore;
 
-    [self navigate:call];
+    // Split string cookie to get name/value
+    NSArray *cookieArray = [cookie componentsSeparatedByString:@"="];
+
+    // Create cookie object
+    NSDictionary *properties = [
+        NSDictionary dictionaryWithObjectsAndKeys:
+        @"/", NSHTTPCookiePath,
+        url, NSHTTPCookieOriginURL,
+        cookieArray[0], NSHTTPCookieName,
+        [cookieArray[1] stringByReplacingOccurrencesOfString:@"; path" withString:@""], NSHTTPCookieValue,
+        nil
+    ];
+    NSHTTPCookie *realCookie = [NSHTTPCookie cookieWithProperties:properties];
+    [cookieStore setCookie:realCookie completionHandler:^{
+        // Init webview after cookie init
+        self.webview = [[WKWebView alloc] initWithFrame:rc configuration:configuration];
+        self.webview.UIDelegate = self;
+        self.webview.navigationDelegate = self;
+        self.webview.scrollView.delegate = self;
+        self.webview.hidden = [hidden boolValue];
+        self.webview.scrollView.showsHorizontalScrollIndicator = [scrollBar boolValue];
+        self.webview.scrollView.showsVerticalScrollIndicator = [scrollBar boolValue];
+        
+        [self.webview addObserver:self forKeyPath:@"estimatedProgress" options:NSKeyValueObservingOptionNew context:NULL];
+        
+        UIViewController* presentedViewController = self.viewController.presentedViewController;
+        UIViewController* currentViewController = presentedViewController != nil ? presentedViewController : self.viewController;
+        [currentViewController.view addSubview:self.webview];
+
+        // Load page
+        [self navigate:call];
+    }];
+
+
+
 }
 
 - (void)webView:(WKWebView *)webView didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition disposition, NSURLCredential *credential))completionHandler {

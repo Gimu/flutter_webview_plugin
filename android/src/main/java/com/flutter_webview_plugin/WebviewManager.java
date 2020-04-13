@@ -380,7 +380,8 @@ class WebviewManager {
             String invalidUrlRegex,
             boolean geolocationEnabled,
             boolean debuggingEnabled,
-            boolean ignoreSSLErrors
+            boolean ignoreSSLErrors,
+            String cookie
     ) {
         webView.getSettings().setJavaScriptEnabled(withJavascript);
         webView.getSettings().setBuiltInZoomControls(withZoom);
@@ -399,6 +400,12 @@ class WebviewManager {
 
         webView.getSettings().setUseWideViewPort(useWideViewPort);
 
+        // TODO EXPAND
+        if (cookie != null) {
+          CookieManager cookieManager = CookieManager.getInstance();
+          cookieManager.setCookie(url, cookie);
+        }
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
             webView.getSettings().setMediaPlaybackRequiresUserGesture(mediaPlaybackRequiresUserGesture);
         }
