@@ -35,10 +35,10 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {
     if ([@"launch" isEqualToString:call.method]) {
-        if (!self.webview)
-            [self initWebview:call withResult:result];
-        else
-            [self navigate:call];
+        //if (!self.webview)
+            [self initWebview:call];
+        //else
+        //    [self navigate:call];
         result(nil);
     } else if ([@"close" isEqualToString:call.method]) {
         [self closeWebView];
@@ -84,7 +84,7 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
     }
 }
 
-- (void)initWebview:(FlutterMethodCall*)call withResult:(FlutterResult)result {
+- (void)initWebview:(FlutterMethodCall*)call {
     NSNumber *clearCache = call.arguments[@"clearCache"];
     NSNumber *clearCookies = call.arguments[@"clearCookies"];
     NSNumber *hidden = call.arguments[@"hidden"];
@@ -186,8 +186,6 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         // Load page
         [self navigate:call];
     }];
-
-
 
 }
 
